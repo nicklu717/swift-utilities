@@ -65,8 +65,13 @@ extension PackageModule.External {
             let version: Version
             
             enum Version {
-                case tag(String)
+                case tag(Tag)
                 case branch(String)
+                
+                enum Tag {
+                    case from(String)
+                    case exact(String)
+                }
             }
         }
         
@@ -132,7 +137,12 @@ extension PackageModule.External.Module {
     var package: Package.Dependency {
         switch packageInfo.version {
         case .tag(let tag):
-            return .package(url: packageInfo.url, exact: Version(stringLiteral: tag))
+            switch tag {
+            case .from(let version):
+                return .package(url: packageInfo.url, from: Version(stringLiteral: version))
+            case .exact(let version):
+                return .package(url: packageInfo.url, exact: Version(stringLiteral: version))
+            }
         case .branch(let branch):
             return .package(url: packageInfo.url, branch: branch)
         }
