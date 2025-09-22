@@ -9,13 +9,15 @@ import SwiftUI
 
 open class ViewStore<State, Action>: ObservableObject {
     
+    public typealias Reducer = (inout State, Action) -> Effect?
+    
     @Published private(set) public var state: State
     
-    private let reducer: (inout State, Action) -> Effect?
+    private let reducer: Reducer
     
     private var runningTasks: [AnyHashable: Task<Void, Never>] = [:]
     
-    public init(state: State, reducer: @escaping (inout State, Action) -> Effect?) {
+    public init(state: State, reducer: @escaping Reducer) {
         self.state = state
         self.reducer = reducer
     }
