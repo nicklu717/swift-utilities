@@ -7,6 +7,8 @@
 
 import ObjectiveC
 
+extension NSObject: With {}
+
 public protocol With {}
 
 public extension With where Self: Any {
@@ -49,5 +51,3 @@ public extension With where Self: AnyObject {
         return self
     }
 }
-
-extension NSObject: With {}
