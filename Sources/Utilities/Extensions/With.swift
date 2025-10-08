@@ -11,7 +11,7 @@ extension NSObject: With {}
 
 public protocol With {}
 
-public extension With where Self: Any {
+extension With where Self: Any {
     
     /// ```swift
     /// let frame = CGRect().with {
@@ -19,7 +19,7 @@ public extension With where Self: Any {
     ///     $0.size.width = 100
     /// }
     /// ```
-    func with(_ block: (inout Self) throws -> Void) rethrows -> Self {
+    public func with(_ block: (inout Self) throws -> Void) rethrows -> Self {
         var copy = self
         try block(&copy)
         return copy
@@ -32,12 +32,12 @@ public extension With where Self: Any {
     ///     $0.synchronize()
     /// }
     /// ```
-    func `do`(_ block: (Self) throws -> Void) rethrows {
+    public func `do`(_ block: (Self) throws -> Void) rethrows {
         try block(self)
     }
 }
 
-public extension With where Self: AnyObject {
+extension With where Self: AnyObject {
     
     /// ```swift
     /// let label = UILabel().with {
@@ -46,7 +46,7 @@ public extension With where Self: AnyObject {
     ///     $0.text = "Hello, World!"
     /// }
     /// ```
-    func with(_ block: (Self) throws -> Void) rethrows -> Self {
+    public func with(_ block: (Self) throws -> Void) rethrows -> Self {
         try block(self)
         return self
     }

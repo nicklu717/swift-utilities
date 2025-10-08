@@ -8,13 +8,13 @@
 #if canImport(UIKit)
 import UIKit
 
-public extension UIFont {
+extension UIFont {
     
-    static func custom(_ family: Family, size: CGFloat, weight: Weight = .regular) -> UIFont {
+    public static func custom(_ family: Family, size: CGFloat, weight: Weight = .regular) -> UIFont {
         return family.font(size: size, weight: weight)
     }
     
-    enum Family: String {
+    public enum Family: String {
         case pingFangTC = "PingFangTC"
 
         func font(size: CGFloat, weight: Weight = .regular) -> UIFont {
