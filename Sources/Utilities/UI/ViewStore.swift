@@ -9,7 +9,7 @@ import SwiftUI
 
 open class ViewStore<State, Action>: ObservableObject {
     
-    public typealias Reducer = (inout State, Action) -> Effect?
+    public typealias Reducer = (inout State, Action) -> Effect
     
     @Published private(set) public var state: State
     
@@ -23,8 +23,7 @@ open class ViewStore<State, Action>: ObservableObject {
     }
     
     public func send(_ action: Action) {
-        guard let effect = reducer(&state, action) else { return }
-        switch effect {
+        switch reducer(&state, action) {
         case .run(let cancelID, let operation):
             let task = Task { await operation(send) }
             if let cancelID {
@@ -34,6 +33,8 @@ open class ViewStore<State, Action>: ObservableObject {
         case .cancel(let id):
             runningTasks[id]?.cancel()
             runningTasks[id] = nil
+        case .none:
+            break
         }
     }
 }
@@ -44,5 +45,6 @@ extension ViewStore {
     public enum Effect {
         case run(cancelID: AnyHashable? = nil, _ operation: (_ send: (Action) -> Void) async -> Void)
         case cancel(id: AnyHashable)
+        case none
     }
 }

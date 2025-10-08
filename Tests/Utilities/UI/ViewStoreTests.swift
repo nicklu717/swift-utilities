@@ -60,7 +60,7 @@ extension ViewStoreTests {
                     case .updateString(let result):
                         state.isLoading = false
                         state.textResult = result.map { $0 }
-                        return nil
+                        return .none
                     }
                 }
             )
