@@ -16,7 +16,7 @@ open class ViewStore<State, Action>: ObservableObject {
     
     private let reducer: Reducer
     
-    private var tasks: [AnyHashable: Task<Void, Never>] = [:]
+    private var cancellables: [AnyHashable: AnyCancellable] = [:]
     
     public init(state: State, reducer: @escaping Reducer) {
         self.state = state
@@ -28,27 +28,35 @@ open class ViewStore<State, Action>: ObservableObject {
         switch effect {
         case .task(let id, let operation):
             let task = Task { await operation(send) }
-            if let id {
-                set(task: task, id: id)
-            }
+            set(cancellable: AnyCancellable(task), id: id ?? AnyHashable(UUID()))
+        case .publisher(let id, let getPublisher):
+            let cancellable = getPublisher()
+                .receive(on: DispatchQueue.main)
+                .sink { [unowned self] in
+                    self.send($0)
+                }
+            set(cancellable: cancellable, id: id ?? AnyHashable(UUID()))
         case .cancel(let id):
-            set(task: nil, id: id)
+            set(cancellable: nil, id: id)
         case .none:
             break
         }
     }
     
-    private func set(task: Task<Void, Never>?, id: AnyHashable) {
-        tasks[id]?.cancel()
-        tasks[id] = task
+    private func set(cancellable: AnyCancellable?, id: AnyHashable) {
+        cancellables[id]?.cancel()
+        cancellables[id] = cancellable
     }
 }
+
+extension Task: @retroactive Cancellable {}
 
 // MARK: - Effect
 extension ViewStore {
     
     public enum Effect {
-        case task(id: AnyHashable?, _ operation: (_ send: (Action) -> Void) async -> Void)
+        case task(id: AnyHashable? = nil, _ operation: (_ send: (Action) -> Void) async -> Void)
+        case publisher(id: AnyHashable? = nil, _ getPublisher: () -> AnyPublisher<Action, Never>)
         case cancel(id: AnyHashable)
         case none
     }
