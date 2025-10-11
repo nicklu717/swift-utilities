@@ -13,50 +13,80 @@ import Foundation
 @Suite
 struct ViewStoreTests {
     
+    static let successString = "success"
+    
     @Test
-    func success() {
-        let successText = "success"
-        let store = TestViewStore(networkProvider: MockNetworkProvider(mockResult: .success(successText)))
-        
+    func sendRequestAndCancel() throws {
+        let store = TestViewStore(
+            state: .init(),
+            networkProvider: MockNetworkProvider()
+        )
+        #expect(try store.state.textResult.get() == "")
         #expect(!store.state.isLoading)
-        if case .success(let text) = store.state.textResult {
-            #expect(text == nil)
-        } else {
-            #expect(Bool(false))
-        }
         
-        store.send(.fetchString)
+        store.send(.requestString)
+        #expect(try store.state.textResult.get() == "")
         #expect(store.state.isLoading)
+        
+        store.send(.cancelRequestString)
+        #expect(try store.state.textResult.get() == "")
+        #expect(!store.state.isLoading)
+    }
+    
+    @Test
+    func updateRequest() throws {
+        let store = TestViewStore(
+            state: .init(isLoading: true),
+            networkProvider: MockNetworkProvider()
+        )
+        #expect(try store.state.textResult.get() == "")
+        #expect(store.state.isLoading)
+        
+        store.send(.updateString(.success(Self.successString)))
+        #expect(try store.state.textResult.get() == Self.successString)
+        #expect(!store.state.isLoading)
     }
 }
 
 extension ViewStoreTests {
+    typealias RequestResult = Result<String, Error>
     
     struct State {
         var isLoading: Bool = false
-        var textResult: Result<String?, Error> = .success(nil)
+        var textResult: Result<String, Error> = .success("")
     }
     
     enum Action {
-        case fetchString
-        case updateString(Result<String, Error>)
+        case requestString
+        case cancelRequestString
+        case updateString(RequestResult)
     }
     
     class TestViewStore: ViewStore<State, Action> {
         private let networkProvider: MockNetworkProvider
         
-        init(networkProvider: MockNetworkProvider) {
+        enum TaskID {
+            case longRequestString
+        }
+        
+        init(
+            state: State,
+            networkProvider: MockNetworkProvider
+        ) {
             self.networkProvider = networkProvider
             super.init(
-                state: .init(),
+                state: state,
                 reducer: { state, action in
                     switch action {
-                    case .fetchString:
+                    case .requestString:
                         state.isLoading = true
-                        return .run { send in
-                            let result = await networkProvider.fetchString()
+                        return .task(id: TaskID.longRequestString) { send in
+                            let result = await networkProvider.requestString()
                             send(.updateString(result))
                         }
+                    case .cancelRequestString:
+                        state.isLoading = false
+                        return .cancel(TaskID.longRequestString)
                     case .updateString(let result):
                         state.isLoading = false
                         state.textResult = result.map { $0 }
@@ -69,14 +99,13 @@ extension ViewStoreTests {
     
     class MockNetworkProvider {
         
-        let mockResult: Result<String, Error>
-        
-        init(mockResult: Result<String, Error>) {
-            self.mockResult = mockResult
-        }
-        
-        func fetchString() async -> Result<String, Error> {
-            return mockResult
+        func requestString() async -> RequestResult {
+            do {
+                try await Task.sleep(for: .seconds(3))
+                return .success(successString)
+            } catch {
+                return .failure(error)
+            }
         }
     }
 }
