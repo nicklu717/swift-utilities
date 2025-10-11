@@ -86,7 +86,7 @@ extension ViewStoreTests {
                         }
                     case .cancelRequestString:
                         state.isLoading = false
-                        return .cancel(TaskID.longRequestString)
+                        return .cancel(id: TaskID.longRequestString)
                     case .updateString(let result):
                         state.isLoading = false
                         state.textResult = result.map { $0 }
