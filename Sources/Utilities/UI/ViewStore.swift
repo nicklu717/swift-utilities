@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 open class ViewStore<State, Action>: ObservableObject {
     
@@ -15,7 +16,7 @@ open class ViewStore<State, Action>: ObservableObject {
     
     private let reducer: Reducer
     
-    private var runningTasks: [AnyHashable: Task<Void, Never>] = [:]
+    private var tasks: [AnyHashable: Task<Void, Never>] = [:]
     
     public init(state: State, reducer: @escaping Reducer) {
         self.state = state
@@ -23,19 +24,23 @@ open class ViewStore<State, Action>: ObservableObject {
     }
     
     public func send(_ action: Action) {
-        switch reducer(&state, action) {
-        case .run(let cancelID, let operation):
+        let effect = reducer(&state, action)
+        switch effect {
+        case .task(let id, let operation):
             let task = Task { await operation(send) }
-            if let cancelID {
-                runningTasks[cancelID]?.cancel()
-                runningTasks[cancelID] = task
+            if let id {
+                set(task: task, forID: id)
             }
         case .cancel(let id):
-            runningTasks[id]?.cancel()
-            runningTasks[id] = nil
+            set(task: nil, forID: id)
         case .none:
             break
         }
+    }
+    
+    private func set(task: Task<Void, Never>?, forID id: AnyHashable) {
+        tasks[id]?.cancel()
+        tasks[id] = task
     }
 }
 
@@ -43,7 +48,7 @@ open class ViewStore<State, Action>: ObservableObject {
 extension ViewStore {
     
     public enum Effect {
-        case run(cancelID: AnyHashable? = nil, _ operation: (_ send: (Action) -> Void) async -> Void)
+        case task(id: AnyHashable?, _ operation: (_ send: (Action) -> Void) async -> Void)
         case cancel(id: AnyHashable)
         case none
     }
